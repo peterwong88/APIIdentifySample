@@ -2,11 +2,13 @@
 using IdentifySampleAPI.Entities.Identity;
 using IdentifySampleAPI.Extensions;
 using IdentifySampleAPI.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace IdentifySampleAPI.Controllers
@@ -25,10 +27,13 @@ namespace IdentifySampleAPI.Controllers
             _tokenService = tokenService;
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<UserDto>> GetCurrentUser()
         {
-            var user = await _userManager.FindByEmailFromClaimsPrinciple(User);
+            var email = HttpContext.User?.Claims?.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
+            
+            var user = await _userManager.FindByEmailAsync(email);
 
             return new UserDto
             {
@@ -38,13 +43,24 @@ namespace IdentifySampleAPI.Controllers
             };
         }
 
+        [Authorize]
         [HttpGet("emailexists")]
         public async Task<ActionResult<bool>> CheckEmailExistsAsync([FromQuery] string email)
         {
             return await _userManager.FindByEmailAsync(email) != null;
         }
 
-       
+        [Authorize]
+        [HttpGet("address")]
+        public async Task<ActionResult<Address>> GetUserAddress()
+        {
+            var email = HttpContext.User?.Claims?.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            return user.Address;
+           
+        }
 
         [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
